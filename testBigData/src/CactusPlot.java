@@ -1,6 +1,8 @@
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -107,18 +109,66 @@ public class CactusPlot {
 
 	static class SecondReducer extends Reducer<LongWritable, Text, LongWritable, Text> {
 
+		private Map<Text, List<Text>> table = new HashMap<>();
+
+		@Override
+		protected void cleanup(Reducer<LongWritable, Text, LongWritable, Text>.Context context)
+				throws IOException, InterruptedException {
+
+			
+			//MANDO IN OUTPUT LA TABELLA 
+			int index = -1;
+			String row = "";
+			List<Integer> maxSize = new ArrayList<>();
+
+			for (Text t : table.keySet()) {
+				row += t + "\t";
+				maxSize.add(table.get(t).size());
+			}
+
+			int max = -1;
+			for (Integer i : maxSize) {
+				if (i > max)
+					max = i;
+			}
+
+			context.write(new LongWritable(index), new Text(row));
+			row = "";
+
+			int counter = 0;
+
+			while (counter < max) {
+				for (Text t : table.keySet()) {
+					if (table.get(t).size() <= counter)
+						table.get(t).add(new Text("*"));
+					row += table.get(t).get(counter)+"\t";
+					
+				}
+				counter++;
+				index++;
+				context.write(new LongWritable(index), new Text(row));
+				row = "";
+			}
+
+			
+			
+		}
+
 		@Override
 		protected void reduce(LongWritable arg0, Iterable<Text> arg1,
 				Reducer<LongWritable, Text, LongWritable, Text>.Context arg2) throws IOException, InterruptedException {
 
-			
-			// COSTRUISCO LA TABELLA
-			String s = "";
-			for (Text t : arg1)
-			{
-				s += t.toString() + ";";
+			// COSTRUISCO UN'HASH MAP CHE SERVIRA' PER STAMPARE LA TABELLA
+			//IN MODO ORDINATO
+			for (Text t : arg1) {
+				String[] split = t.toString().split("#");
+				Text text = new Text(split[0]);
+				if (!table.containsKey(text))
+					table.put(text, new ArrayList<>());
+
+				table.get(text).add(new Text(split[1]));
+
 			}
-			arg2.write(arg0, new Text(s));
 		}
 
 	}
@@ -161,13 +211,14 @@ public class CactusPlot {
 		jcl.addJob(cj1);
 		jcl.addJob(cj2);
 
+		
+		//NON E' IL MODO MIGLIORE DI FARLO, GIURO CHE NEL PROGETTO LO FARO' PER BENE
 		Thread t = new Thread(jcl);
 		t.start();
 
 		while (!jcl.allFinished()) {
 			System.out.println("still running");
 			Thread.sleep(1000);
-
 		}
 		System.exit(0);
 
