@@ -107,12 +107,12 @@ public class CactusPlot {
 
 	}
 
-	static class SecondReducer extends Reducer<LongWritable, Text, LongWritable, Text> {
+	static class SecondReducer extends Reducer<LongWritable, Text, Text, Text> {
 
 		private Map<Text, List<Text>> table = new HashMap<>();
 
 		@Override
-		protected void cleanup(Reducer<LongWritable, Text, LongWritable, Text>.Context context)
+		protected void cleanup(Reducer<LongWritable, Text, Text, Text>.Context context)
 				throws IOException, InterruptedException {
 
 			
@@ -132,7 +132,7 @@ public class CactusPlot {
 					max = i;
 			}
 
-			context.write(new LongWritable(index), new Text(row));
+			context.write(new Text("# ist"), new Text(row));
 			row = "";
 
 			int counter = 0;
@@ -146,7 +146,7 @@ public class CactusPlot {
 				}
 				counter++;
 				index++;
-				context.write(new LongWritable(index), new Text(row));
+				context.write(new Text(String.valueOf(index)), new Text(row));
 				row = "";
 			}
 
@@ -156,7 +156,7 @@ public class CactusPlot {
 
 		@Override
 		protected void reduce(LongWritable arg0, Iterable<Text> arg1,
-				Reducer<LongWritable, Text, LongWritable, Text>.Context arg2) throws IOException, InterruptedException {
+				Reducer<LongWritable, Text, Text, Text>.Context arg2) throws IOException, InterruptedException {
 
 			// COSTRUISCO UN'HASH MAP CHE SERVIRA' PER STAMPARE LA TABELLA
 			//IN MODO ORDINATO
@@ -193,7 +193,7 @@ public class CactusPlot {
 		FileOutputFormat.setOutputPath(firstJob, new Path(myArgs[1]));
 
 		Job job2 = Job.getInstance(conf, "2");
-		job2.setOutputKeyClass(LongWritable.class);
+		job2.setOutputKeyClass(Text.class);
 		job2.setOutputValueClass(Text.class);
 		job2.setMapOutputKeyClass(LongWritable.class);
 		job2.setMapOutputValueClass(Text.class);
